@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const {
   db, insertReceipt, unlinkReceipt, deleteReceipt,
   getTransactions, getOrphanReceipts, getStats, setReceiptRequired, linkReceipt,
-  getTransactionById, findContentDuplicates, setVerified,
+  getTransactionById, setVerified,
 } = require('./db');
 const { importStatement } = require('./csv-import');
 const { matchReceipt } = require('./matcher');
