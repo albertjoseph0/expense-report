@@ -7,12 +7,12 @@ const crypto = require('crypto');
 const {
   db, insertReceipt, unlinkReceipt, deleteReceipt,
   getTransactions, getOrphanReceipts, getStats, setReceiptRequired, linkReceipt,
-  getTransactionById, findContentDuplicates, setVerified,
+  getTransactionById, findContentDuplicates, setVerified, updateReceipt,
 } = require('./db');
 const { importStatement } = require('./csv-import');
 const { matchReceipt } = require('./matcher');
 const { analyzeReceiptImage } = require('./mistral-ocr');
-const { renderPage, renderSummary, renderTableBody, renderRow, renderOrphanList, renderToast } = require('./views');
+const { renderPage, renderSummary, renderTableBody, renderRow, renderOrphanList, renderToast, renderOrphanCard, renderOrphanEditForm } = require('./views');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -182,6 +182,50 @@ app.post('/receipts', imageUpload.single('receipt'), async (req, res) => {
     renderTableBody(transactions) +
     `<template>${renderSummary(stats)}<div id="orphan-list" hx-swap-oob="innerHTML">${renderOrphanList(orphans, allTxns)}</div>${toast}</template>`
   );
+});
+
+// Get edit form for receipt
+app.get('/receipts/:id/edit', (req, res) => {
+  const receiptId = parseInt(req.params.id);
+  const receipt = db.prepare('SELECT * FROM receipts WHERE id = ?').get(receiptId);
+  if (!receipt) return res.status(404).send(renderToast('❌ Receipt not found', 'error'));
+  res.send(renderOrphanEditForm(receipt));
+});
+
+// Get display card for receipt (cancel edit)
+app.get('/receipts/:id/card', (req, res) => {
+  const receiptId = parseInt(req.params.id);
+  const receipt = db.prepare('SELECT * FROM receipts WHERE id = ?').get(receiptId);
+  if (!receipt) return res.status(404).send(renderToast('❌ Receipt not found', 'error'));
+
+  const transactions = getTransactions({});
+  res.send(renderOrphanCard(receipt, transactions));
+});
+
+// Update receipt details
+app.patch('/receipts/:id', (req, res) => {
+  const receiptId = parseInt(req.params.id);
+  const { vendor, date, total } = req.body;
+
+  const totalCents = parseCents(total);
+  const totalText = totalCents != null ? (totalCents / 100).toFixed(2) : total;
+
+  try {
+    updateReceipt.run({
+      id: receiptId,
+      vendor: vendor || null,
+      receipt_date: date || null,
+      total_cents: totalCents,
+      total_text: totalText,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send(renderToast('❌ Update failed', 'error'));
+  }
+
+  const updatedReceipt = db.prepare('SELECT * FROM receipts WHERE id = ?').get(receiptId);
+  const transactions = getTransactions({});
+  res.send(renderOrphanCard(updatedReceipt, transactions));
 });
 
 // Manually assign an orphan receipt to a transaction

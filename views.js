@@ -45,15 +45,17 @@ function renderTableBody(transactions) {
   return transactions.map(renderRow).join('\n');
 }
 
-function renderOrphanList(orphanReceipts, transactions) {
-  if (!orphanReceipts || orphanReceipts.length === 0) {
-    return '<p class="empty">No unmatched receipts</p>';
+function renderOrphanCard(r, transactionsOrOptions) {
+  let options = '';
+  if (typeof transactionsOrOptions === 'string') {
+    options = transactionsOrOptions;
+  } else if (Array.isArray(transactionsOrOptions)) {
+    options = transactionsOrOptions.map(t =>
+      `<option value="${t.id}">${esc(t.posted_date)} — ${esc(t.description)} — $${(t.amount_cents / 100).toFixed(2)}</option>`
+    ).join('');
   }
-  const txns = transactions || [];
-  const options = txns.map(t =>
-    `<option value="${t.id}">${esc(t.posted_date)} — ${esc(t.description)} — $${(t.amount_cents / 100).toFixed(2)}</option>`
-  ).join('');
-  return orphanReceipts.map(r => `<div class="orphan-card">
+
+  return `<div class="orphan-card" id="orphan-${r.id}">
   <a href="#" onclick="openViewer('${esc(r.image_path)}'); return false;">
     <img src="${esc(r.image_path)}" class="orphan-thumb" alt="Receipt">
   </a>
@@ -64,9 +66,41 @@ function renderOrphanList(orphanReceipts, transactions) {
       <select name="transaction_id" required><option value="">Assign to…</option>${options}</select>
       <button type="submit" class="assign-btn" title="Assign">✓</button>
     </form>
+    <button hx-get="/receipts/${r.id}/edit" hx-target="#orphan-${r.id}" hx-swap="outerHTML" class="edit-btn" title="Edit">✎</button>
   </div>
   <button hx-delete="/receipts/${r.id}" hx-target="#orphan-list" hx-swap="innerHTML" class="delete-btn" title="Delete">🗑</button>
-</div>`).join('\n');
+</div>`;
+}
+
+function renderOrphanEditForm(r) {
+  const total = r.total_cents != null ? (r.total_cents / 100).toFixed(2) : '';
+  const date = r.receipt_date || '';
+
+  return `<div class="orphan-card editing" id="orphan-${r.id}">
+  <a href="#" onclick="openViewer('${esc(r.image_path)}'); return false;">
+    <img src="${esc(r.image_path)}" class="orphan-thumb" alt="Receipt">
+  </a>
+  <form class="orphan-info edit-form" hx-patch="/receipts/${r.id}" hx-target="#orphan-${r.id}" hx-swap="outerHTML">
+    <input type="text" name="vendor" value="${esc(r.vendor)}" placeholder="Vendor" aria-label="Vendor" class="edit-input">
+    <input type="date" name="date" value="${esc(date)}" aria-label="Date" class="edit-input">
+    <input type="number" name="total" value="${total}" step="0.01" placeholder="0.00" aria-label="Total" class="edit-input">
+    <div class="edit-actions">
+      <button type="submit" class="save-btn" title="Save">✓</button>
+      <button type="button" class="cancel-btn" hx-get="/receipts/${r.id}/card" hx-target="#orphan-${r.id}" hx-swap="outerHTML" title="Cancel">✕</button>
+    </div>
+  </form>
+</div>`;
+}
+
+function renderOrphanList(orphanReceipts, transactions) {
+  if (!orphanReceipts || orphanReceipts.length === 0) {
+    return '<p class="empty">No unmatched receipts</p>';
+  }
+  const txns = transactions || [];
+  const options = txns.map(t =>
+    `<option value="${t.id}">${esc(t.posted_date)} — ${esc(t.description)} — $${(t.amount_cents / 100).toFixed(2)}</option>`
+  ).join('');
+  return orphanReceipts.map(r => renderOrphanCard(r, options)).join('\n');
 }
 
 function renderPage(transactions, stats, orphanReceipts, filters) {
@@ -239,4 +273,4 @@ function renderToast(message, type) {
   return `<div id="toast" hx-swap-oob="innerHTML"><div class="toast-msg ${type}">${message}</div></div>`;
 }
 
-module.exports = { renderPage, renderSummary, renderTableBody, renderRow, renderOrphanList, renderToast };
+module.exports = { renderPage, renderSummary, renderTableBody, renderRow, renderOrphanList, renderOrphanCard, renderOrphanEditForm, renderToast };

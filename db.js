@@ -108,6 +108,15 @@ const setVerified = db.prepare(
   `UPDATE transactions SET verified = @value WHERE id = @transaction_id`
 );
 
+const updateReceipt = db.prepare(
+  `UPDATE receipts
+   SET vendor = @vendor,
+       receipt_date = @receipt_date,
+       total_cents = @total_cents,
+       total_text = @total_text
+   WHERE id = @id`
+);
+
 function getTransactions({ search, dateFrom, dateTo, missingOnly } = {}) {
   let sql = `SELECT t.* FROM transactions t`;
   const conditions = [];
@@ -214,4 +223,5 @@ module.exports = {
   findContentDuplicates,
   setReceiptRequired,
   setVerified,
+  updateReceipt,
 };

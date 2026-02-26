@@ -575,3 +575,69 @@ tr.verified:hover td {
   background: #e6f4ea;
   color: #137333;
 }
+
+/* Edit form in orphan cards */
+.edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  padding: 0 0.3rem;
+  color: #888;
+  transition: color 0.15s;
+}
+
+.edit-btn:hover {
+  color: #4a90d9;
+}
+
+.orphan-card.editing {
+  background: #fdfdfd;
+  border: 1px solid #4a90d9;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.edit-input {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.save-btn, .cancel-btn {
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+}
+
+.save-btn {
+  background: #4a90d9;
+  color: white;
+}
+
+.save-btn:hover {
+  background: #3a7bc8;
+}
+
+.cancel-btn {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.cancel-btn:hover {
+  background: #e0e0e0;
+}
