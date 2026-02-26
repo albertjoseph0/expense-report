@@ -104,12 +104,14 @@ function renderPage(transactions, stats, orphanReceipts, filters) {
         <label><input type="checkbox" name="missingOnly" value="1" ${f.missingOnly ? 'checked' : ''} ${hxAttrs.replace('input changed delay:300ms', 'change')}> Missing receipts only</label>
       </div>
 
-      <table>
-        <thead>
-          <tr><th class="th-verified">Reconciled</th><th>Date</th><th>Description</th><th>Amount</th><th>Receipt</th></tr>
-        </thead>
-        <tbody id="table-body">${renderTableBody(transactions)}</tbody>
-      </table>
+      <div class="transactions-list">
+        <table>
+          <thead>
+            <tr><th class="th-verified">Reconciled</th><th>Date</th><th>Description</th><th>Amount</th><th>Receipt</th></tr>
+          </thead>
+          <tbody id="table-body">${renderTableBody(transactions)}</tbody>
+        </table>
+      </div>
 
       <div class="orphan-section">
         <h2>Unmatched Receipts</h2>
