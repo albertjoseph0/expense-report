@@ -585,6 +585,8 @@ tr.verified:hover td {
   padding: 0 0.3rem;
   color: #888;
   transition: color 0.15s;
+  align-self: flex-start;
+  margin-top: 0.25rem;
 }
 
 .edit-btn:hover {
