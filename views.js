@@ -138,6 +138,7 @@ function renderPage(transactions, stats, orphanReceipts, filters) {
         <input type="date" name="dateFrom" value="${esc(f.dateFrom)}" ${hxAttrs}>
         <input type="date" name="dateTo" value="${esc(f.dateTo)}" ${hxAttrs}>
         <label><input type="checkbox" name="missingOnly" value="1" ${f.missingOnly ? 'checked' : ''} ${hxAttrs.replace('input changed delay:300ms', 'change')}> Missing receipts only</label>
+        <a href="/export" class="btn btn-secondary" style="margin-left: auto;">Download CSV</a>
       </div>
 
       <table>

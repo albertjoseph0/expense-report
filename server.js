@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const {
   db, insertReceipt, unlinkReceipt, deleteReceipt,
   getTransactions, getOrphanReceipts, getStats, setReceiptRequired, linkReceipt,
-  getTransactionById, findContentDuplicates, setVerified, updateReceipt,
+  getTransactionById, setVerified, updateReceipt,
 } = require('./db');
 const { importStatement } = require('./csv-import');
 const { matchReceipt } = require('./matcher');
@@ -83,6 +83,40 @@ app.get('/transactions', (req, res) => {
   const transactions = getTransactions(filters);
   const stats = getStats();
   res.send(renderTableBody(transactions) + `<template>${renderSummary(stats)}</template>`);
+});
+
+// Export transactions as CSV
+app.get('/export', (req, res) => {
+  const transactions = getTransactions({}); // Get all transactions, ignoring filters
+  const headers = ['Date', 'Description', 'Amount', 'Member Name', 'Verified', 'Photo Source'];
+
+  const csvRows = [headers.join(',')];
+
+  for (const txn of transactions) {
+    const date = txn.posted_date;
+    const description = `"${(txn.description || '').replace(/"/g, '""')}"`;
+    const amount = (txn.amount_cents / 100).toFixed(2);
+    const memberName = `"${(txn.member_name || '').replace(/"/g, '""')}"`;
+    const verified = txn.verified ? 'Yes' : 'No';
+
+    let photoSource = '';
+    if (txn.receipts && txn.receipts.length > 0) {
+      const urls = txn.receipts.map(r => `${req.protocol}://${req.get('host')}${r.image_path}`);
+      if (urls.length === 1) {
+        photoSource = `=HYPERLINK("${urls[0]}", "View Receipt")`;
+      } else {
+        photoSource = urls.join(', ');
+      }
+
+      photoSource = `"${photoSource.replace(/"/g, '""')}"`;
+    }
+
+    csvRows.push([date, description, amount, memberName, verified, photoSource].join(','));
+  }
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="transactions.csv"');
+  res.send(csvRows.join('\n'));
 });
 
 // Import bank statement CSV

@@ -199,13 +199,6 @@ function getStats() {
   return { total, withReceipts, missing, exempt, verified };
 }
 
-function findContentDuplicates(receiptDate, totalCents) {
-  if (!receiptDate || totalCents == null) return [];
-  return db.prepare(
-    `SELECT * FROM receipts WHERE receipt_date = ? AND total_cents = ?`
-  ).all(receiptDate, totalCents);
-}
-
 module.exports = {
   db,
   insertStatement,
@@ -220,7 +213,6 @@ module.exports = {
   getOrphanReceipts,
   getUnlinkedTransactions,
   getStats,
-  findContentDuplicates,
   setReceiptRequired,
   setVerified,
   updateReceipt,
