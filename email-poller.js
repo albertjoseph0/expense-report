@@ -20,7 +20,7 @@ const ALLOWED_SENDERS = (process.env.ALLOWED_SENDERS || '')
 
 function saveAttachment(attachment) {
   const ext = path.extname(attachment.filename || '.png') || '.png';
-  const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9) + ext;
+  const uniqueName = crypto.randomUUID() + ext;
   const filePath = path.join('uploads', uniqueName);
   fs.writeFileSync(filePath, attachment.content);
   return '/uploads/' + uniqueName;

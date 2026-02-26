@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 3000;
 const imageStorage = multer.diskStorage({
   destination: 'uploads/',
   filename: (req, file, cb) => {
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const unique = crypto.randomUUID();
     cb(null, unique + path.extname(file.originalname));
   },
 });
