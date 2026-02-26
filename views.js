@@ -69,7 +69,65 @@ function renderOrphanList(orphanReceipts, transactions) {
 </div>`).join('\n');
 }
 
-function renderPage(transactions, stats, orphanReceipts, filters) {
+function renderLoginPage(error) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Expense Report</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+  <div class="auth-container">
+    <h1>Login</h1>
+    ${error ? `<div class="toast-msg error" style="margin-bottom:1rem; text-align:center;">${esc(error)}</div>` : ''}
+    <form action="/login" method="POST">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" required autofocus>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" required>
+      </div>
+      <button type="submit" class="btn">Log In</button>
+    </form>
+    <p>Don't have an account? <a href="/register">Register</a></p>
+  </div>
+</body>
+</html>`;
+}
+
+function renderRegisterPage(error) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Register - Expense Report</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+  <div class="auth-container">
+    <h1>Register</h1>
+    ${error ? `<div class="toast-msg error" style="margin-bottom:1rem; text-align:center;">${esc(error)}</div>` : ''}
+    <form action="/register" method="POST">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" name="username" required autofocus>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" required>
+      </div>
+      <button type="submit" class="btn">Register</button>
+    </form>
+    <p>Already have an account? <a href="/login">Log In</a></p>
+  </div>
+</body>
+</html>`;
+}
+
+function renderPage(user, transactions, stats, orphanReceipts, filters) {
   const f = filters || {};
   const hxAttrs = `hx-get="/transactions" hx-target="#table-body" hx-swap="innerHTML" hx-trigger="input changed delay:300ms" hx-include=".filter-bar *"`;
 
@@ -86,7 +144,13 @@ function renderPage(transactions, stats, orphanReceipts, filters) {
   <div id="toast"></div>
   <div class="page-layout">
     <div class="main-panel">
-      <h1>Expense Report</h1>
+      <div class="header-bar">
+        <h1>Expense Report</h1>
+        <div class="user-info">
+          <span>Logged in as <strong>${esc(user.username)}</strong></span>
+          <a href="/logout" class="btn btn-small">Logout</a>
+        </div>
+      </div>
 
       <div class="actions-bar">
         <form hx-post="/statements" hx-target="#table-body" hx-swap="innerHTML" hx-encoding="multipart/form-data">
@@ -239,4 +303,4 @@ function renderToast(message, type) {
   return `<div id="toast" hx-swap-oob="innerHTML"><div class="toast-msg ${type}">${message}</div></div>`;
 }
 
-module.exports = { renderPage, renderSummary, renderTableBody, renderRow, renderOrphanList, renderToast };
+module.exports = { renderPage, renderSummary, renderTableBody, renderRow, renderOrphanList, renderToast, renderLoginPage, renderRegisterPage };

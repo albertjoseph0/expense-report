@@ -48,10 +48,10 @@ function parseCents(amountStr) {
   return Math.round(parseFloat(cleaned) * 100);
 }
 
-function importStatement(csvBuffer, filename) {
+function importStatement(userId, csvBuffer, filename) {
   const fileSha = crypto.createHash('sha256').update(csvBuffer).digest('hex');
 
-  const existing = findStatementByHash.get(fileSha);
+  const existing = findStatementByHash.get(userId, fileSha);
   if (existing) {
     return { imported: false, reason: 'duplicate', statementId: existing.id };
   }
@@ -65,6 +65,7 @@ function importStatement(csvBuffer, filename) {
 
   const importAll = db.transaction(() => {
     const { lastInsertRowid: statementId } = insertStatement.run({
+      user_id: userId,
       filename,
       file_sha256: fileSha,
     });
@@ -117,7 +118,7 @@ function importStatement(csvBuffer, filename) {
 
   const result = importAll();
 
-  matchOrphanReceipts();
+  matchOrphanReceipts(userId);
 
   return result;
 }
