@@ -47,21 +47,27 @@ function matchReceipt(receiptId) {
   const receipt = db.prepare(`SELECT * FROM receipts WHERE id = ?`).get(receiptId);
   if (!receipt || receipt.total_cents == null || !receipt.receipt_date) return null;
 
-  // Tier 1: prefer transactions with no receipts linked
+  const userId = receipt.user_id;
+
+  // Tier 1: prefer transactions with no receipts linked (Scoped by user)
   const unlinked = db.prepare(`
     SELECT t.* FROM transactions t
-    WHERE NOT EXISTS (SELECT 1 FROM receipts r WHERE r.transaction_id = t.id)
+    JOIN statements s ON t.statement_id = s.id
+    WHERE s.user_id = ?
+      AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.transaction_id = t.id)
       AND t.receipt_required = 1
-  `).all();
+  `).all(userId);
 
   let best = findBestMatch(receipt, unlinked);
   if (!best) {
     // Tier 2: fallback to transactions that already have receipts
     const linked = db.prepare(`
       SELECT t.* FROM transactions t
-      WHERE EXISTS (SELECT 1 FROM receipts r WHERE r.transaction_id = t.id)
+      JOIN statements s ON t.statement_id = s.id
+      WHERE s.user_id = ?
+        AND EXISTS (SELECT 1 FROM receipts r WHERE r.transaction_id = t.id)
         AND t.receipt_required = 1
-    `).all();
+    `).all(userId);
     best = findBestMatch(receipt, linked);
   }
 
@@ -71,8 +77,10 @@ function matchReceipt(receiptId) {
   return best;
 }
 
-function matchOrphanReceipts() {
-  const orphans = db.prepare(`SELECT id FROM receipts WHERE transaction_id IS NULL`).all();
+function matchOrphanReceipts(userId) {
+  if (!userId) return 0;
+
+  const orphans = db.prepare(`SELECT id FROM receipts WHERE user_id = ? AND transaction_id IS NULL`).all(userId);
   let matched = 0;
   for (const orphan of orphans) {
     const result = matchReceipt(orphan.id);
