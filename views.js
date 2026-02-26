@@ -105,12 +105,14 @@ function renderPage(transactions, stats, orphanReceipts, filters) {
         <a href="/export" class="btn btn-secondary" style="margin-left: auto;">Download CSV</a>
       </div>
 
-      <table>
-        <thead>
-          <tr><th class="th-verified">Reconciled</th><th>Date</th><th>Description</th><th>Amount</th><th>Receipt</th></tr>
-        </thead>
-        <tbody id="table-body">${renderTableBody(transactions)}</tbody>
-      </table>
+      <div class="transactions-list">
+        <table>
+          <thead>
+            <tr><th class="th-verified">Reconciled</th><th>Date</th><th>Description</th><th>Amount</th><th>Receipt</th></tr>
+          </thead>
+          <tbody id="table-body">${renderTableBody(transactions)}</tbody>
+        </table>
+      </div>
 
       <div class="orphan-section">
         <h2>Unmatched Receipts</h2>
