@@ -379,6 +379,13 @@ tr.verified:hover td {
   gap: 0.15rem;
 }
 
+.orphan-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
 .orphan-info strong {
   font-size: 0.875rem;
 }
@@ -397,6 +404,7 @@ tr.verified:hover td {
   border-radius: 4px;
   transition: background 0.15s;
   flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .delete-btn:hover {
@@ -446,6 +454,27 @@ tr.verified:hover td {
 
 .assign-btn:hover {
   background: #c8f0d4;
+}
+
+/* Edit form in orphan cards */
+.edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  color: #bbb;
+  transition: color 0.15s;
+  margin-left: auto;
+  opacity: 0;
+}
+
+.orphan-card:hover .edit-btn {
+  opacity: 1;
+}
+
+.edit-btn:hover {
+  color: #4a90d9;
 }
 
 /* Toast notifications */
@@ -574,23 +603,6 @@ tr.verified:hover td {
 .upload-status.done {
   background: #e6f4ea;
   color: #137333;
-}
-
-/* Edit form in orphan cards */
-.edit-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.1rem;
-  padding: 0 0.3rem;
-  color: #888;
-  transition: color 0.15s;
-  align-self: flex-start;
-  margin-top: 0.25rem;
-}
-
-.edit-btn:hover {
-  color: #4a90d9;
 }
 
 .orphan-card.editing {

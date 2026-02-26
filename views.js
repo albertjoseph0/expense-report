@@ -60,13 +60,15 @@ function renderOrphanCard(r, transactionsOrOptions) {
     <img src="${esc(r.image_path)}" class="orphan-thumb" alt="Receipt">
   </a>
   <div class="orphan-info">
-    <strong>${esc(r.vendor) || 'Unknown'}</strong>
+    <div class="orphan-header">
+      <strong>${esc(r.vendor) || 'Unknown'}</strong>
+      <button hx-get="/receipts/${r.id}/edit" hx-target="#orphan-${r.id}" hx-swap="outerHTML" class="edit-btn" title="Edit">✎</button>
+    </div>
     <span>${esc(r.receipt_date) || 'No date'} · ${esc(r.total_text) || '?'}</span>
     <form class="assign-form" hx-post="/receipts/${r.id}/assign" hx-target="#table-body" hx-swap="innerHTML">
       <select name="transaction_id" required><option value="">Assign to…</option>${options}</select>
       <button type="submit" class="assign-btn" title="Assign">✓</button>
     </form>
-    <button hx-get="/receipts/${r.id}/edit" hx-target="#orphan-${r.id}" hx-swap="outerHTML" class="edit-btn" title="Edit">✎</button>
   </div>
   <button hx-delete="/receipts/${r.id}" hx-target="#orphan-list" hx-swap="innerHTML" class="delete-btn" title="Delete">🗑</button>
 </div>`;
