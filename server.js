@@ -85,6 +85,40 @@ app.get('/transactions', (req, res) => {
   res.send(renderTableBody(transactions) + `<template>${renderSummary(stats)}</template>`);
 });
 
+// Export transactions as CSV
+app.get('/export', (req, res) => {
+  const transactions = getTransactions({}); // Get all transactions, ignoring filters
+  const headers = ['Date', 'Description', 'Amount', 'Member Name', 'Verified', 'Photo Source'];
+
+  const csvRows = [headers.join(',')];
+
+  for (const txn of transactions) {
+    const date = txn.posted_date;
+    const description = `"${(txn.description || '').replace(/"/g, '""')}"`;
+    const amount = (txn.amount_cents / 100).toFixed(2);
+    const memberName = `"${(txn.member_name || '').replace(/"/g, '""')}"`;
+    const verified = txn.verified ? 'Yes' : 'No';
+
+    let photoSource = '';
+    if (txn.receipts && txn.receipts.length > 0) {
+      const urls = txn.receipts.map(r => `${req.protocol}://${req.get('host')}${r.image_path}`);
+      if (urls.length === 1) {
+        photoSource = `=HYPERLINK("${urls[0]}", "View Receipt")`;
+      } else {
+        photoSource = urls.join(', ');
+      }
+
+      photoSource = `"${photoSource.replace(/"/g, '""')}"`;
+    }
+
+    csvRows.push([date, description, amount, memberName, verified, photoSource].join(','));
+  }
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="transactions.csv"');
+  res.send(csvRows.join('\n'));
+});
+
 // Import bank statement CSV
 app.post('/statements', csvUpload.single('statement'), (req, res) => {
   if (!req.file) return res.status(400).send('<tr><td colspan="5">No CSV file uploaded</td></tr>');
