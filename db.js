@@ -48,6 +48,13 @@ CREATE TABLE IF NOT EXISTS receipts (
 
 CREATE INDEX IF NOT EXISTS receipts_transaction_id_idx ON receipts(transaction_id);
 CREATE INDEX IF NOT EXISTS receipts_total_cents_idx ON receipts(total_cents);
+
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `);
 
 // Migration: add verified column to transactions if it doesn't exist
@@ -66,12 +73,28 @@ try {
 db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS receipts_image_sha256_uq ON receipts(image_sha256) WHERE image_sha256 IS NOT NULL`);
 db.exec(`CREATE INDEX IF NOT EXISTS receipts_date_total_idx ON receipts(receipt_date, total_cents)`);
 
+// Migration: add user_id to statements
+try {
+  db.exec(`ALTER TABLE statements ADD COLUMN user_id INTEGER REFERENCES users(id)`);
+} catch (e) {
+  // Column already exists
+}
+db.exec(`CREATE INDEX IF NOT EXISTS statements_user_id_idx ON statements(user_id)`);
+
+// Migration: add user_id to receipts
+try {
+  db.exec(`ALTER TABLE receipts ADD COLUMN user_id INTEGER REFERENCES users(id)`);
+} catch (e) {
+  // Column already exists
+}
+db.exec(`CREATE INDEX IF NOT EXISTS receipts_user_id_idx ON receipts(user_id)`);
+
 const insertStatement = db.prepare(
-  `INSERT INTO statements (filename, file_sha256) VALUES (@filename, @file_sha256)`
+  `INSERT INTO statements (filename, file_sha256, user_id) VALUES (@filename, @file_sha256, @user_id)`
 );
 
 const findStatementByHash = db.prepare(
-  `SELECT * FROM statements WHERE file_sha256 = ?`
+  `SELECT * FROM statements WHERE file_sha256 = ? AND user_id = ?`
 );
 
 const insertTransaction = db.prepare(`
@@ -83,9 +106,9 @@ const insertTransaction = db.prepare(`
 
 const insertReceipt = db.prepare(`
   INSERT INTO receipts
-    (transaction_id, vendor, receipt_date, total_cents, total_text, image_path, image_sha256, source, email_link)
+    (transaction_id, vendor, receipt_date, total_cents, total_text, image_path, image_sha256, source, email_link, user_id)
   VALUES
-    (@transaction_id, @vendor, @receipt_date, @total_cents, @total_text, @image_path, @image_sha256, @source, @email_link)
+    (@transaction_id, @vendor, @receipt_date, @total_cents, @total_text, @image_path, @image_sha256, @source, @email_link, @user_id)
 `);
 
 const linkReceipt = db.prepare(
@@ -117,10 +140,11 @@ const updateReceipt = db.prepare(
    WHERE id = @id`
 );
 
-function getTransactions({ search, dateFrom, dateTo, missingOnly } = {}) {
-  let sql = `SELECT t.* FROM transactions t`;
-  const conditions = [];
-  const params = {};
+function getTransactions({ search, dateFrom, dateTo, missingOnly, userId } = {}) {
+  let sql = `SELECT t.* FROM transactions t
+    JOIN statements s ON t.statement_id = s.id`;
+  const conditions = ['s.user_id = @userId'];
+  const params = { userId };
 
   if (missingOnly) {
     conditions.push(`NOT EXISTS (SELECT 1 FROM receipts r WHERE r.transaction_id = t.id) AND t.receipt_required = 1`);
@@ -138,9 +162,7 @@ function getTransactions({ search, dateFrom, dateTo, missingOnly } = {}) {
     params.dateTo = dateTo;
   }
 
-  if (conditions.length) {
-    sql += ` WHERE ` + conditions.join(' AND ');
-  }
+  sql += ` WHERE ` + conditions.join(' AND ');
   sql += ` ORDER BY t.posted_date DESC, t.id DESC`;
 
   const transactions = db.prepare(sql).all(params);
@@ -166,35 +188,59 @@ function attachReceipts(transactions) {
   return transactions;
 }
 
-function getTransactionById(id) {
-  const txn = db.prepare(`SELECT * FROM transactions WHERE id = ?`).get(id);
+function getTransactionById(id, userId) {
+  const txn = db.prepare(
+    `SELECT t.* FROM transactions t
+     JOIN statements s ON t.statement_id = s.id
+     WHERE t.id = ? AND s.user_id = ?`
+  ).get(id, userId);
   if (!txn) return null;
   txn.receipts = db.prepare(`SELECT * FROM receipts WHERE transaction_id = ? ORDER BY created_at`).all(id);
   return txn;
 }
 
-const getOrphanReceipts = db.prepare(
-  `SELECT * FROM receipts WHERE transaction_id IS NULL ORDER BY created_at DESC`
+function getOrphanReceipts(userId) {
+  return db.prepare(
+    `SELECT * FROM receipts WHERE transaction_id IS NULL AND user_id = ? ORDER BY created_at DESC`
+  ).all(userId);
+}
+
+function getUnlinkedTransactions(userId) {
+  return db.prepare(`
+    SELECT t.* FROM transactions t
+    JOIN statements s ON t.statement_id = s.id
+    WHERE s.user_id = ?
+      AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.transaction_id = t.id)
+      AND t.receipt_required = 1
+    ORDER BY t.posted_date DESC
+  `).all(userId);
+}
+
+// --- User helpers ---
+const createUser = db.prepare(
+  `INSERT INTO users (username, password_hash) VALUES (@username, @password_hash)`
 );
 
-const getUnlinkedTransactions = db.prepare(`
-  SELECT t.* FROM transactions t
-  WHERE NOT EXISTS (SELECT 1 FROM receipts r WHERE r.transaction_id = t.id)
-    AND t.receipt_required = 1
-  ORDER BY t.posted_date DESC
-`);
+const findUserByUsername = db.prepare(
+  `SELECT * FROM users WHERE username = ?`
+);
 
-function getStats() {
-  const total = db.prepare(`SELECT COUNT(*) AS count FROM transactions`).get().count;
+const findUserById = db.prepare(
+  `SELECT * FROM users WHERE id = ?`
+);
+
+function getStats(userId) {
+  const base = `FROM transactions t JOIN statements s ON t.statement_id = s.id WHERE s.user_id = ?`;
+  const total = db.prepare(`SELECT COUNT(*) AS count ${base}`).get(userId).count;
   const withReceipts = db.prepare(
-    `SELECT COUNT(*) AS count FROM transactions t WHERE EXISTS (SELECT 1 FROM receipts r WHERE r.transaction_id = t.id)`
-  ).get().count;
+    `SELECT COUNT(*) AS count ${base} AND EXISTS (SELECT 1 FROM receipts r WHERE r.transaction_id = t.id)`
+  ).get(userId).count;
   const exempt = db.prepare(
-    `SELECT COUNT(*) AS count FROM transactions WHERE receipt_required = 0`
-  ).get().count;
+    `SELECT COUNT(*) AS count ${base} AND t.receipt_required = 0`
+  ).get(userId).count;
   const verified = db.prepare(
-    `SELECT COUNT(*) AS count FROM transactions WHERE verified = 1`
-  ).get().count;
+    `SELECT COUNT(*) AS count ${base} AND t.verified = 1`
+  ).get(userId).count;
   const missing = total - withReceipts - exempt;
   return { total, withReceipts, missing, exempt, verified };
 }
@@ -216,4 +262,7 @@ module.exports = {
   setReceiptRequired,
   setVerified,
   updateReceipt,
+  createUser,
+  findUserByUsername,
+  findUserById,
 };

@@ -105,9 +105,13 @@ function renderOrphanList(orphanReceipts, transactions) {
   return orphanReceipts.map(r => renderOrphanCard(r, options)).join('\n');
 }
 
-function renderPage(transactions, stats, orphanReceipts, filters) {
+function renderPage(transactions, stats, orphanReceipts, filters, user) {
   const f = filters || {};
   const hxAttrs = `hx-get="/transactions" hx-target="#table-body" hx-swap="innerHTML" hx-trigger="input changed delay:300ms" hx-include=".filter-bar *"`;
+
+  const userBar = user
+    ? `<div class="user-bar"><span>Signed in as <strong>${esc(user.username)}</strong></span><form method="POST" action="/logout" style="display:inline"><button type="submit" class="btn btn-small">Sign Out</button></form></div>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -122,6 +126,7 @@ function renderPage(transactions, stats, orphanReceipts, filters) {
   <div id="toast"></div>
   <div class="page-layout">
     <div class="main-panel">
+      ${userBar}
       <h1>Expense Report</h1>
 
       <div class="actions-bar">
@@ -276,4 +281,4 @@ function renderToast(message, type) {
   return `<div id="toast" hx-swap-oob="innerHTML"><div class="toast-msg ${type}">${message}</div></div>`;
 }
 
-module.exports = { renderPage, renderSummary, renderTableBody, renderRow, renderOrphanList, renderOrphanCard, renderOrphanEditForm, renderToast };
+module.exports = { esc, renderPage, renderSummary, renderTableBody, renderRow, renderOrphanList, renderOrphanCard, renderOrphanEditForm, renderToast };
